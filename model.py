@@ -18,7 +18,7 @@ import sys, random, math
   @return the length of the vector
 """
 def vec3Length(x, y, z):
-    return math.sqrt(x * x + y * y + z * z);
+    return math.sqrt(x * x + y * y + z * z)
 
 """
   Add a scalar to a vector in-place
@@ -28,9 +28,9 @@ def vec3Length(x, y, z):
   @param value scalar value to add
 """
 def vec3Add(x, y, z, value):
-    x += value;
-    y += value;
-    z += value;
+    x += value
+    y += value
+    z += value
 
 """
   Subtract a scalar from a vector in-place
@@ -40,9 +40,9 @@ def vec3Add(x, y, z, value):
   @param value scalar value to subtract
 """
 def vec3Sub(x, y, z, value):
-    x -= value;
-    y -= value;
-    z -= value;
+    x -= value
+    y -= value
+    z -= value
 
 """
   Multiply a vector by a scalar value in-place
@@ -52,9 +52,9 @@ def vec3Sub(x, y, z, value):
   @param multiplier scalar value to multiply by
 """
 def vec3Mult(x, y, z, multiplier):
-    x *= multiplier;
-    y *= multiplier;
-    z *= multiplier;
+    x *= multiplier
+    y *= multiplier
+    z *= multiplier
 
 """
   Divide a vector by a scalar value in-place
@@ -64,9 +64,9 @@ def vec3Mult(x, y, z, multiplier):
   @param divisor scalar value to divide by
 """
 def vec3Div(x, y, z, divisor):
-    x /= divisor;
-    y /= divisor;
-    z /= divisor;
+    x /= divisor
+    y /= divisor
+    z /= divisor
 
 
 """
@@ -77,8 +77,8 @@ def vec3Div(x, y, z, divisor):
 """
 def vec3Normalize(x, y, z):
     # Get the length
-    length = vec3Length(x, y, z);
-    vec3Div(x, y, z, length);
+    length = vec3Length(x, y, z)
+    vec3Div(x, y, z, length)
 
 """
   Clamp each component of a 3-part position to lie within a minimum and maximum value.
@@ -91,17 +91,17 @@ def vec3Normalize(x, y, z):
   @param MAX_POSITION the maximum value for each component
 """
 def clampPosition(x, y, z, MIN_POSITION, MAX_POSITION):
-    x = MIN_POSITION if (x < MIN_POSITION) else x;
-    x = MAX_POSITION if (x > MAX_POSITION) else x;
+    x = MIN_POSITION if (x < MIN_POSITION) else x
+    x = MAX_POSITION if (x > MAX_POSITION) else x
 
-    y = MIN_POSITION if (y < MIN_POSITION) else y;
-    y = MAX_POSITION if (y > MAX_POSITION) else y;
+    y = MIN_POSITION if (y < MIN_POSITION) else y
+    y = MAX_POSITION if (y > MAX_POSITION) else y
 
-    z = MIN_POSITION if (z < MIN_POSITION) else z;
-    z = MAX_POSITION if (z > MAX_POSITION) else z;
+    z = MIN_POSITION if (z < MIN_POSITION) else z
+    z = MAX_POSITION if (z > MAX_POSITION) else z
 
 # Change to false if pyflamegpu has not been built with visualisation support
-VISUALISATION = True;
+VISUALISATION = True
 
 """
   outputdata agent function for Boid agents, which outputs publicly visible properties to a message list
@@ -320,150 +320,150 @@ FLAMEGPU_AGENT_FUNCTION(inputdata, flamegpu::MessageSpatial3D, flamegpu::Message
 }
 """
 
-model = pyflamegpu.ModelDescription("Boids_BruteForce");
+model = pyflamegpu.ModelDescription("Boids_BruteForce")
 
 """
   GLOBALS
 """
-env = model.Environment();
+env = model.Environment()
 # Population size to generate, if no agents are loaded from disk
-env.newPropertyUInt("POPULATION_TO_GENERATE", 1024); #32768);
+env.newPropertyUInt("POPULATION_TO_GENERATE", 1024)
 
 # Environment Bounds
-env.newPropertyFloat("MIN_POSITION", -0.5);
-env.newPropertyFloat("MAX_POSITION", +0.5);
+env.newPropertyFloat("MIN_POSITION", -0.5)
+env.newPropertyFloat("MAX_POSITION", +0.5)
 
 # Initialisation parameter(s)
-env.newPropertyFloat("MAX_INITIAL_SPEED", 1.0);
-env.newPropertyFloat("MIN_INITIAL_SPEED", 0.01);
+env.newPropertyFloat("MAX_INITIAL_SPEED", 1.0)
+env.newPropertyFloat("MIN_INITIAL_SPEED", 0.01)
 
 # Interaction radius
-env.newPropertyFloat("INTERACTION_RADIUS", 0.1);
-env.newPropertyFloat("SEPARATION_RADIUS", 0.005);
+env.newPropertyFloat("INTERACTION_RADIUS", 0.1)
+env.newPropertyFloat("SEPARATION_RADIUS", 0.005)
 
 # Global Scalers
-env.newPropertyFloat("TIME_SCALE", 0.0005);
-env.newPropertyFloat("GLOBAL_SCALE", 0.15);
+env.newPropertyFloat("TIME_SCALE", 0.0005)
+env.newPropertyFloat("GLOBAL_SCALE", 0.15)
 
 # Rule scalers
-env.newPropertyFloat("STEER_SCALE", 0.65);
-env.newPropertyFloat("COLLISION_SCALE", 0.75);
-env.newPropertyFloat("MATCH_SCALE", 1.25);
+env.newPropertyFloat("STEER_SCALE", 0.65)
+env.newPropertyFloat("COLLISION_SCALE", 0.75)
+env.newPropertyFloat("MATCH_SCALE", 1.25)
 
 """
   Location message
 """
-message = model.newMessageSpatial3D("location");
+message = model.newMessageSpatial3D("location")
 # Set the range and bounds.
-message.setRadius(env.getPropertyFloat("INTERACTION_RADIUS"));
-message.setMin(env.getPropertyFloat("MIN_POSITION"), env.getPropertyFloat("MIN_POSITION"), env.getPropertyFloat("MIN_POSITION"));
-message.setMax(env.getPropertyFloat("MAX_POSITION"), env.getPropertyFloat("MAX_POSITION"), env.getPropertyFloat("MAX_POSITION"));
+message.setRadius(env.getPropertyFloat("INTERACTION_RADIUS"))
+message.setMin(env.getPropertyFloat("MIN_POSITION"), env.getPropertyFloat("MIN_POSITION"), env.getPropertyFloat("MIN_POSITION"))
+message.setMax(env.getPropertyFloat("MAX_POSITION"), env.getPropertyFloat("MAX_POSITION"), env.getPropertyFloat("MAX_POSITION"))
 # A message to hold the location of an agent.
-message.newVariableID("id");
+message.newVariableID("id")
 # X Y Z are implicit.
-# message.newVariable<float>("x");
-# message.newVariable<float>("y");
-# message.newVariable<float>("z");
-message.newVariableFloat("fx");
-message.newVariableFloat("fy");
-message.newVariableFloat("fz");
+# message.newVariable<float>("x")
+# message.newVariable<float>("y")
+# message.newVariable<float>("z")
+message.newVariableFloat("fx")
+message.newVariableFloat("fy")
+message.newVariableFloat("fz")
     
 """
   Boid agent
 """
-agent = model.newAgent("Boid");
-agent.newVariableFloat("x");
-agent.newVariableFloat("y");
-agent.newVariableFloat("z");
-agent.newVariableFloat("fx");
-agent.newVariableFloat("fy");
-agent.newVariableFloat("fz");
-agent.newRTCFunction("outputdata", outputdata).setMessageOutput("location");
-agent.newRTCFunction("inputdata", inputdata).setMessageInput("location");
+agent = model.newAgent("Boid")
+agent.newVariableFloat("x")
+agent.newVariableFloat("y")
+agent.newVariableFloat("z")
+agent.newVariableFloat("fx")
+agent.newVariableFloat("fy")
+agent.newVariableFloat("fz")
+agent.newRTCFunction("outputdata", outputdata).setMessageOutput("location")
+agent.newRTCFunction("inputdata", inputdata).setMessageInput("location")
 
 
 """
   Control flow
 """    
 # Layer #1
-model.newLayer().addAgentFunction("Boid", "outputdata");
+model.newLayer().addAgentFunction("Boid", "outputdata")
 # Layer #2
-model.newLayer().addAgentFunction("Boid", "inputdata");
+model.newLayer().addAgentFunction("Boid", "inputdata")
 
 """
   Create Model Runner
 """   
-cudaSimulation = pyflamegpu.CUDASimulation(model);
+cudaSimulation = pyflamegpu.CUDASimulation(model)
 
 """
   Create Visualisation
 """
 if pyflamegpu.VISUALISATION:
-    visualisation = cudaSimulation.getVisualisation();
+    visualisation = cudaSimulation.getVisualisation()
     # Configure vis
-    envWidth = env.getPropertyFloat("MAX_POSITION") - env.getPropertyFloat("MIN_POSITION");
-    INIT_CAM = env.getPropertyFloat("MAX_POSITION") * 1.25;
-    visualisation.setInitialCameraLocation(INIT_CAM, INIT_CAM, INIT_CAM);
-    visualisation.setCameraSpeed(0.001 * envWidth);
-    visualisation.setViewClips(0.00001, 50);
-    circ_agt = visualisation.addAgent("Boid");
-    # Position vars are named x, y, z; so they are used by default
-    circ_agt.setForwardXVariable("fx");
-    circ_agt.setForwardYVariable("fy");
-    circ_agt.setForwardZVariable("fz");
-    circ_agt.setModel(pyflamegpu.STUNTPLANE);
-    circ_agt.setModelScale(env.getPropertyFloat("SEPARATION_RADIUS") * 10);
-    visualisation.activate();
+    envWidth = env.getPropertyFloat("MAX_POSITION") - env.getPropertyFloat("MIN_POSITION")
+    INIT_CAM = env.getPropertyFloat("MAX_POSITION") * 1.25
+    visualisation.setInitialCameraLocation(INIT_CAM, INIT_CAM, INIT_CAM)
+    visualisation.setCameraSpeed(0.001 * envWidth)
+    visualisation.setViewClips(0.00001, 50)
+    circ_agt = visualisation.addAgent("Boid")
+    # Position vars are named x, y, z so they are used by default
+    circ_agt.setForwardXVariable("fx")
+    circ_agt.setForwardYVariable("fy")
+    circ_agt.setForwardZVariable("fz")
+    circ_agt.setModel(pyflamegpu.STUNTPLANE)
+    circ_agt.setModelScale(env.getPropertyFloat("SEPARATION_RADIUS") * 10)
+    visualisation.activate()
 
 """
   Initialise Model
 """
-cudaSimulation.initialise(sys.argv);
+cudaSimulation.initialise(sys.argv)
 
 # If no xml model file was is provided, generate a population.
 if not cudaSimulation.getSimulationConfig().input_file:
     # Uniformly distribute agents within space, with uniformly distributed initial velocity.
-    random.seed(cudaSimulation.getSimulationConfig().random_seed);
-    min_pos = env.getPropertyFloat("MIN_POSITION");
-    max_pos = env.getPropertyFloat("MAX_POSITION");
-    min_speed = env.getPropertyFloat("MIN_INITIAL_SPEED");
-    max_speed = env.getPropertyFloat("MAX_INITIAL_SPEED");
-    populationSize = env.getPropertyUInt("POPULATION_TO_GENERATE");
-    population = pyflamegpu.AgentVector(model.Agent("Boid"), populationSize);
+    random.seed(cudaSimulation.getSimulationConfig().random_seed)
+    min_pos = env.getPropertyFloat("MIN_POSITION")
+    max_pos = env.getPropertyFloat("MAX_POSITION")
+    min_speed = env.getPropertyFloat("MIN_INITIAL_SPEED")
+    max_speed = env.getPropertyFloat("MAX_INITIAL_SPEED")
+    populationSize = env.getPropertyUInt("POPULATION_TO_GENERATE")
+    population = pyflamegpu.AgentVector(model.Agent("Boid"), populationSize)
     for i in range(populationSize):
-        instance = population[i];
+        instance = population[i]
 
         # Agent position in space
-        instance.setVariableFloat("x", random.uniform(min_pos, max_pos));
-        instance.setVariableFloat("y", random.uniform(min_pos, max_pos));
-        instance.setVariableFloat("z", random.uniform(min_pos, max_pos));
+        instance.setVariableFloat("x", random.uniform(min_pos, max_pos))
+        instance.setVariableFloat("y", random.uniform(min_pos, max_pos))
+        instance.setVariableFloat("z", random.uniform(min_pos, max_pos))
 
         # Generate a random velocity direction
-        fx = random.uniform(-1, 1);
-        fy = random.uniform(-1, 1);
-        fz = random.uniform(-1, 1);
+        fx = random.uniform(-1, 1)
+        fy = random.uniform(-1, 1)
+        fz = random.uniform(-1, 1)
         # Generate a random speed between 0 and the maximum initial speed
-        fmagnitude = random.uniform(min_speed, max_speed);
+        fmagnitude = random.uniform(min_speed, max_speed)
         # Use the random speed for the velocity.
-        vec3Normalize(fx, fy, fz);
-        vec3Mult(fx, fy, fz, fmagnitude);
+        vec3Normalize(fx, fy, fz)
+        vec3Mult(fx, fy, fz, fmagnitude)
 
         # Set these for the agent.
-        instance.setVariableFloat("fx", fx);
-        instance.setVariableFloat("fy", fy);
-        instance.setVariableFloat("fz", fz);
+        instance.setVariableFloat("fx", fx)
+        instance.setVariableFloat("fy", fy)
+        instance.setVariableFloat("fz", fz)
 
-    cudaSimulation.setPopulationData(population);
+    cudaSimulation.setPopulationData(population)
 
 """
   Execution
 """
-cudaSimulation.simulate();
+cudaSimulation.simulate()
 
 """
   Export Pop
 """
-# cudaSimulation.exportData("end.xml");
+# cudaSimulation.exportData("end.xml")
 
 if pyflamegpu.VISUALISATION:
-    visualisation.join();
+    visualisation.join()
