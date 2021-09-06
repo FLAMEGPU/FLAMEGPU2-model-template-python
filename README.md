@@ -2,19 +2,25 @@
 
 This repository acts as an example to be used as a template for creating standalone FLAME GPU 2 models which use the python interface.
 
-For details on how to develop a model using FLAME GPU 2, refer to the [user guide & api documentation](https://docs.flamegpu.com/).
+For details on how to develop a model using FLAME GPU 2, refer to the [userguide & API documentation](https://docs.flamegpu.com/).
+
+## CUDA C++ Interface
+
+FLAME GPU 2 also provides a python-based interface for writing models. If you wish to use this instead of the CUDA C++ interface, see [FLAMEGPU/FLAMEGPU2-example-template](https://github.com/FLAMEGPU/FLAMEGPU2-example-template).
 
 ## Dependencies
 
 + [Python](https://www.python.org/) `>= 3.6` for python integration
-+ [CUDA](https://developer.nvidia.com/cuda-downloads) `>= 11.0` and a Compute Capability `>= 3.5` NVIDIA GPU.
++ [CUDA](https://developer.nvidia.com/cuda-downloads) `>= 11.0` and a [Compute Capability](https://developer.nvidia.com/cuda-gpus) `>= 3.5` NVIDIA GPU.
 + pyflamegpu - the python bindings for [FLAME GPU](https://github.com/FLAMEGPU/FLAMEGPU2) `>= 2`
 
 ## Getting pyflamegpu
 
+`pyflamegpu` is currently available as pre-built python binary wheels, or can be built from source.
+
 ### Pre-compiled pyflamegpu
 
-Pre-built python wheels are available for Windows and Linux, for a range of Python versions on x86_64 systems.
+Pre-built python wheels are available for Windows and Linux, for a range of Python versions on `x86_64` systems.
 
 To install a pre-built version of `pyflamegpu`:
 
@@ -26,7 +32,7 @@ To install a pre-built version of `pyflamegpu`:
 
 If the available python wheels are not appropriate for your system, or you wish to build with different CMake configuration options (i.e. `SEATBELTS=OFF` for improved performance with reduced safety checks) you can build your own copy of pyflamegpu.
 
-1. Clone the main [FLAMEGPU/FLAMEGPU2  git repository](https://github.com/FLAMEGPU/FLAMEGPU2) or download an [archived release](https://github.com/FLAMEGPU/FLAMEGPU2/releases).
+1. Clone the main [FLAMEGPU/FLAMEGPU2 git repository](https://github.com/FLAMEGPU/FLAMEGPU2) or download an [archived release](https://github.com/FLAMEGPU/FLAMEGPU2/releases).
 2. Create a build directory and navigate to it.
 3. Configure CMake with `BUILD_SWIG_PYTHON` set to `ON`.
     + See the main [FLAMEGPU/FLAMEGPU2](https://github.com/FLAMEGPU/FLAMEGPU2) repository for further information on CMake configuration options
@@ -42,7 +48,7 @@ Once `pyflamegpu` is installed into your local python installation or activated 
 python3 model.py <arguments>
 ```
 
-Use `-h/--help` to see what command line arguments are available.
+Use `-h/--help` to see what command line arguments are available for the Simulation or Ensemble within the model
 
 ```bash
 python3 model.py --help
@@ -56,4 +62,3 @@ For general information on FLAME GPU, Usage of FLAME GPU `>= 2` and support see:
 + [Documentation and User Guide](https://docs.flamegpu.com)
 + [GitHub Discussions](https://github.com/FLAMEGPU/FLAMEGPU2/discussions)
 + [GitHub Issues](https://github.com/FLAMEGPU/FLAMEGPU2/issues)
-
