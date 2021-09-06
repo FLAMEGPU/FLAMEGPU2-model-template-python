@@ -1,6 +1,9 @@
 # venv directories
-.venv
-venv
+.venv*/
+venv*/
+
+# Any wheel files copied into this directory
+*.whl
 
 # Model output files
 *.xml
