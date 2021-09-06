@@ -100,9 +100,6 @@ def clampPosition(x, y, z, MIN_POSITION, MAX_POSITION):
     z = MIN_POSITION if (z < MIN_POSITION) else z
     z = MAX_POSITION if (z > MAX_POSITION) else z
 
-# Change to false if pyflamegpu has not been built with visualisation support
-VISUALISATION = True
-
 """
   outputdata agent function for Boid agents, which outputs publicly visible properties to a message list
 """
