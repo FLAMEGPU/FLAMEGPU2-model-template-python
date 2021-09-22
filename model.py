@@ -1,466 +1,214 @@
-from pyflamegpu import *
+"""
+Implementation of the Circles FLAME GPU model in python, as an example.
+"""
+
+# Import pyflamegpu
+import pyflamegpu
+# Import standard python libs that are used
 import sys, random, math
 
-"""
-  FLAME GPU 2 implementation of the Boids model, using spatial3D messaging.
-  This is based on the FLAME GPU 1 implementation, but with dynamic generation of agents. 
-  Agents are also clamped to be within the environment bounds, rather than wrapped as in FLAME GPU 1.
-
-  @todo - Should the agent's velocity change when it is clamped to the environment?
-"""
+# Define FLAME GPU Agent functions as strings
 
 
-"""
-  Get the length of a vector
-  @param x x component of the vector
-  @param y y component of the vector
-  @param z z component of the vector
-  @return the length of the vector
-"""
-def vec3Length(x, y, z):
-    return math.sqrt(x * x + y * y + z * z)
-
-"""
-  Add a scalar to a vector in-place
-  @param x x component of the vector
-  @param y y component of the vector
-  @param z z component of the vector
-  @param value scalar value to add
-"""
-def vec3Add(x, y, z, value):
-    x += value
-    y += value
-    z += value
-
-"""
-  Subtract a scalar from a vector in-place
-  @param x x component of the vector
-  @param y y component of the vector
-  @param z z component of the vector
-  @param value scalar value to subtract
-"""
-def vec3Sub(x, y, z, value):
-    x -= value
-    y -= value
-    z -= value
-
-"""
-  Multiply a vector by a scalar value in-place
-  @param x x component of the vector
-  @param y y component of the vector
-  @param z z component of the vector
-  @param multiplier scalar value to multiply by
-"""
-def vec3Mult(x, y, z, multiplier):
-    x *= multiplier
-    y *= multiplier
-    z *= multiplier
-
-"""
-  Divide a vector by a scalar value in-place
-  @param x x component of the vector
-  @param y y component of the vector
-  @param z z component of the vector
-  @param divisor scalar value to divide by
-"""
-def vec3Div(x, y, z, divisor):
-    x /= divisor
-    y /= divisor
-    z /= divisor
-
-
-"""
-  Normalize a 3 component vector in-place
-  @param x x component of the vector
-  @param y y component of the vector
-  @param z z component of the vector
-"""
-def vec3Normalize(x, y, z):
-    # Get the length
-    length = vec3Length(x, y, z)
-    vec3Div(x, y, z, length)
-
-"""
-  Clamp each component of a 3-part position to lie within a minimum and maximum value.
-  Performs the operation in place
-  Unlike the FLAME GPU 1 example, this is a clamping operation, rather than wrapping.
-  @param x x component of the vector
-  @param y y component of the vector
-  @param z z component of the vector
-  @param MIN_POSITION the minimum value for each component
-  @param MAX_POSITION the maximum value for each component
-"""
-def clampPosition(x, y, z, MIN_POSITION, MAX_POSITION):
-    x = MIN_POSITION if (x < MIN_POSITION) else x
-    x = MAX_POSITION if (x > MAX_POSITION) else x
-
-    y = MIN_POSITION if (y < MIN_POSITION) else y
-    y = MAX_POSITION if (y > MAX_POSITION) else y
-
-    z = MIN_POSITION if (z < MIN_POSITION) else z
-    z = MAX_POSITION if (z > MAX_POSITION) else z
-
-"""
-  outputdata agent function for Boid agents, which outputs publicly visible properties to a message list
-"""
-outputdata = r"""
-FLAMEGPU_AGENT_FUNCTION(outputdata, flamegpu::MessageNone, flamegpu::MessageSpatial3D) {
-    // Output each agents publicly visible properties.
+# Agent Function to output the agents ID and position in to a 3D spatial message list
+output_message = r"""
+FLAMEGPU_AGENT_FUNCTION(output_message, flamegpu::MessageNone, flamegpu::MessageSpatial3D) {
     FLAMEGPU->message_out.setVariable<flamegpu::id_t>("id", FLAMEGPU->getID());
-    FLAMEGPU->message_out.setVariable<float>("x", FLAMEGPU->getVariable<float>("x"));
-    FLAMEGPU->message_out.setVariable<float>("y", FLAMEGPU->getVariable<float>("y"));
-    FLAMEGPU->message_out.setVariable<float>("z", FLAMEGPU->getVariable<float>("z"));
-    FLAMEGPU->message_out.setVariable<float>("fx", FLAMEGPU->getVariable<float>("fx"));
-    FLAMEGPU->message_out.setVariable<float>("fy", FLAMEGPU->getVariable<float>("fy"));
-    FLAMEGPU->message_out.setVariable<float>("fz", FLAMEGPU->getVariable<float>("fz"));
+    FLAMEGPU->message_out.setLocation(
+        FLAMEGPU->getVariable<float>("x"),
+        FLAMEGPU->getVariable<float>("y"),
+        FLAMEGPU->getVariable<float>("z"));
     return flamegpu::ALIVE;
 }
 """
-"""
-  inputdata agent function for Boid agents, which reads data from neighbouring Boid agents, to perform the boid flocking model.
-"""
-inputdata = r"""
-// Vector utility functions, see top of file for versions with commentary
-FLAMEGPU_HOST_DEVICE_FUNCTION float vec3Length(const float x, const float y, const float z) {
-    return sqrtf(x * x + y * y + z * z);
-}
-FLAMEGPU_HOST_DEVICE_FUNCTION void vec3Add(float &x, float &y, float &z, const float value) {
-    x += value;
-    y += value;
-    z += value;
-}
-FLAMEGPU_HOST_DEVICE_FUNCTION void vec3Sub(float &x, float &y, float &z, const float value) {
-    x -= value;
-    y -= value;
-    z -= value;
-}
-FLAMEGPU_HOST_DEVICE_FUNCTION void vec3Mult(float &x, float &y, float &z, const float multiplier) {
-    x *= multiplier;
-    y *= multiplier;
-    z *= multiplier;
-}
-FLAMEGPU_HOST_DEVICE_FUNCTION void vec3Div(float &x, float &y, float &z, const float divisor) {
-    x /= divisor;
-    y /= divisor;
-    z /= divisor;
-}
-FLAMEGPU_HOST_DEVICE_FUNCTION void vec3Normalize(float &x, float &y, float &z) {
-    // Get the length
-    float length = vec3Length(x, y, z);
-    vec3Div(x, y, z, length);
-}
-FLAMEGPU_HOST_DEVICE_FUNCTION void clampPosition(float &x, float &y, float &z, const float MIN_POSITION, const float MAX_POSITION) {
-    x = (x < MIN_POSITION)? MIN_POSITION: x;
-    x = (x > MAX_POSITION)? MAX_POSITION: x;
 
-    y = (y < MIN_POSITION)? MIN_POSITION: y;
-    y = (y > MAX_POSITION)? MAX_POSITION: y;
-
-    z = (z < MIN_POSITION)? MIN_POSITION: z;
-    z = (z > MAX_POSITION)? MAX_POSITION: z;
-}
-// Agent function
-FLAMEGPU_AGENT_FUNCTION(inputdata, flamegpu::MessageSpatial3D, flamegpu::MessageNone) {
-    // Agent properties in local register
-    const flamegpu::id_t id = FLAMEGPU->getID();
-    // Agent position
-    float agent_x = FLAMEGPU->getVariable<float>("x");
-    float agent_y = FLAMEGPU->getVariable<float>("y");
-    float agent_z = FLAMEGPU->getVariable<float>("z");
-    // Agent velocity
-    float agent_fx = FLAMEGPU->getVariable<float>("fx");
-    float agent_fy = FLAMEGPU->getVariable<float>("fy");
-    float agent_fz = FLAMEGPU->getVariable<float>("fz");
-
-    // Boids percieved center
-    float perceived_centre_x = 0.0f;
-    float perceived_centre_y = 0.0f;
-    float perceived_centre_z = 0.0f;
-    int perceived_count = 0;
-
-    // Boids global velocity matching
-    float global_velocity_x = 0.0f;
-    float global_velocity_y = 0.0f;
-    float global_velocity_z = 0.0f;
-
-    // Boids short range avoidance centre
-    float collision_centre_x = 0.0f;
-    float collision_centre_y = 0.0f;
-    float collision_centre_z = 0.0f;
-    int collision_count = 0;
-
-    const float INTERACTION_RADIUS = FLAMEGPU->environment.getProperty<float>("INTERACTION_RADIUS");
-    const float SEPARATION_RADIUS = FLAMEGPU->environment.getProperty<float>("SEPARATION_RADIUS");
-    // Iterate location messages, accumulating relevant data and counts.
-    for (const auto &message : FLAMEGPU->message_in(agent_x, agent_y, agent_z)) {
-        // Ignore self messages.
-        if (message.getVariable<flamegpu::id_t>("id") != id) {
-            // Get the message location and velocity.
-            const float message_x = message.getVariable<float>("x");
-            const float message_y = message.getVariable<float>("y");
-            const float message_z = message.getVariable<float>("z");
-
-            // Check interaction radius
-            float separation = vec3Length(agent_x - message_x, agent_y - message_y, agent_z - message_z);
-
-            if (separation < (INTERACTION_RADIUS)) {
-                // Update the percieved centre
-                perceived_centre_x += message_x;
-                perceived_centre_y += message_y;
-                perceived_centre_z += message_z;
-                perceived_count++;
-
-                // Update percieved velocity matching
-                const float message_fx = message.getVariable<float>("fx");
-                const float message_fy = message.getVariable<float>("fy");
-                const float message_fz = message.getVariable<float>("fz");
-                global_velocity_x += message_fx;
-                global_velocity_y += message_fy;
-                global_velocity_z += message_fz;
-
-                // Update collision centre
-                if (separation < (SEPARATION_RADIUS)) {  // dependant on model size
-                    collision_centre_x += message_x;
-                    collision_centre_y += message_y;
-                    collision_centre_z += message_z;
-                    collision_count += 1;
-                }
+# Agent function to iterate messages, and move according to the rules of the circle model
+move = r"""
+FLAMEGPU_AGENT_FUNCTION(move, flamegpu::MessageSpatial3D, flamegpu::MessageNone) {
+    const flamegpu::id_t ID = FLAMEGPU->getID();
+    const float REPULSE_FACTOR = FLAMEGPU->environment.getProperty<float>("repulse");
+    const float RADIUS = FLAMEGPU->message_in.radius();
+    float fx = 0.0;
+    float fy = 0.0;
+    float fz = 0.0;
+    const float x1 = FLAMEGPU->getVariable<float>("x");
+    const float y1 = FLAMEGPU->getVariable<float>("y");
+    const float z1 = FLAMEGPU->getVariable<float>("z");
+    int count = 0;
+    for (const auto &message : FLAMEGPU->message_in(x1, y1, z1)) {
+        if (message.getVariable<flamegpu::id_t>("id") != ID) {
+            const float x2 = message.getVariable<float>("x");
+            const float y2 = message.getVariable<float>("y");
+            const float z2 = message.getVariable<float>("z");
+            float x21 = x2 - x1;
+            float y21 = y2 - y1;
+            float z21 = z2 - z1;
+            const float separation = cbrt(x21*x21 + y21*y21 + z21*z21);
+            if (separation < RADIUS && separation > 0.0f) {
+                float k = sinf((separation / RADIUS)*3.141*-2)*REPULSE_FACTOR;
+                // Normalise without recalculating separation
+                x21 /= separation;
+                y21 /= separation;
+                z21 /= separation;
+                fx += k * x21;
+                fy += k * y21;
+                fz += k * z21;
+                count++;
             }
         }
     }
-
-    // Divide positions/velocities by relevant counts.
-    vec3Div(perceived_centre_x, perceived_centre_y, perceived_centre_z, perceived_count);
-    vec3Div(global_velocity_x, global_velocity_y, global_velocity_z, perceived_count);
-    vec3Div(global_velocity_x, global_velocity_y, global_velocity_z, collision_count);
-
-    // Total change in velocity
-    float velocity_change_x = 0.f;
-    float velocity_change_y = 0.f;
-    float velocity_change_z = 0.f;
-
-    // Rule 1) Steer towards perceived centre of flock (Cohesion)
-    float steer_velocity_x = 0.f;
-    float steer_velocity_y = 0.f;
-    float steer_velocity_z = 0.f;
-    if (perceived_count > 0) {
-        const float STEER_SCALE = FLAMEGPU->environment.getProperty<float>("STEER_SCALE");
-        steer_velocity_x = (perceived_centre_x - agent_x) * STEER_SCALE;
-        steer_velocity_y = (perceived_centre_y - agent_y) * STEER_SCALE;
-        steer_velocity_z = (perceived_centre_z - agent_z) * STEER_SCALE;
-    }
-    velocity_change_x += steer_velocity_x;
-    velocity_change_y += steer_velocity_y;
-    velocity_change_z += steer_velocity_z;
-
-    // Rule 2) Match neighbours speeds (Alignment)
-    float match_velocity_x = 0.f;
-    float match_velocity_y = 0.f;
-    float match_velocity_z = 0.f;
-    if (collision_count > 0) {
-        const float MATCH_SCALE = FLAMEGPU->environment.getProperty<float>("MATCH_SCALE");
-        match_velocity_x = global_velocity_x * MATCH_SCALE;
-        match_velocity_y = global_velocity_y * MATCH_SCALE;
-        match_velocity_z = global_velocity_z * MATCH_SCALE;
-    }
-    velocity_change_x += match_velocity_x;
-    velocity_change_y += match_velocity_y;
-    velocity_change_z += match_velocity_z;
-
-    // Rule 3) Avoid close range neighbours (Separation)
-    float avoid_velocity_x = 0.0f;
-    float avoid_velocity_y = 0.0f;
-    float avoid_velocity_z = 0.0f;
-    if (collision_count > 0) {
-        const float COLLISION_SCALE = FLAMEGPU->environment.getProperty<float>("COLLISION_SCALE");
-        avoid_velocity_x = (agent_x - collision_centre_x) * COLLISION_SCALE;
-        avoid_velocity_y = (agent_y - collision_centre_y) * COLLISION_SCALE;
-        avoid_velocity_z = (agent_z - collision_centre_z) * COLLISION_SCALE;
-    }
-    velocity_change_x += avoid_velocity_x;
-    velocity_change_y += avoid_velocity_y;
-    velocity_change_z += avoid_velocity_z;
-
-    // Global scale of velocity change
-    vec3Mult(velocity_change_x, velocity_change_y, velocity_change_z, FLAMEGPU->environment.getProperty<float>("GLOBAL_SCALE"));
-
-    // Update agent velocity
-    agent_fx += velocity_change_x;
-    agent_fy += velocity_change_y;
-    agent_fz += velocity_change_z;
-
-    // Bound velocity
-    float agent_fscale = vec3Length(agent_fx, agent_fy, agent_fz);
-    if (agent_fscale > 1) {
-        vec3Div(agent_fx, agent_fy, agent_fz, agent_fscale);
-    }
-
-    // Apply the velocity
-    const float TIME_SCALE = FLAMEGPU->environment.getProperty<float>("TIME_SCALE");
-    agent_x += agent_fx * TIME_SCALE;
-    agent_y += agent_fy * TIME_SCALE;
-    agent_z += agent_fz * TIME_SCALE;
-
-    // Bound position
-    clampPosition(agent_x, agent_y, agent_z, FLAMEGPU->environment.getProperty<float>("MIN_POSITION"), FLAMEGPU->environment.getProperty<float>("MAX_POSITION"));
-
-    // Update global agent memory.
-    FLAMEGPU->setVariable<float>("x", agent_x);
-    FLAMEGPU->setVariable<float>("y", agent_y);
-    FLAMEGPU->setVariable<float>("z", agent_z);
-
-    FLAMEGPU->setVariable<float>("fx", agent_fx);
-    FLAMEGPU->setVariable<float>("fy", agent_fy);
-    FLAMEGPU->setVariable<float>("fz", agent_fz);
-
+    fx /= count > 0 ? count : 1;
+    fy /= count > 0 ? count : 1;
+    fz /= count > 0 ? count : 1;
+    FLAMEGPU->setVariable<float>("x", x1 + fx);
+    FLAMEGPU->setVariable<float>("y", y1 + fy);
+    FLAMEGPU->setVariable<float>("z", z1 + fz);
+    FLAMEGPU->setVariable<float>("drift", cbrt(fx*fx + fy*fy + fz*fz));
     return flamegpu::ALIVE;
 }
 """
 
-model = pyflamegpu.ModelDescription("Boids_BruteForce")
+# A Callback host function, to check the progress of the model / validate the model.
 
-"""
-  GLOBALS
-"""
-env = model.Environment()
-# Population size to generate, if no agents are loaded from disk
-env.newPropertyUInt("POPULATION_TO_GENERATE", 1024)
+class step_validation(pyflamegpu.HostFunctionCallback):
+    def __init__(self):
+        super().__init__()
+        # Static variables?
+        self.prevTotalDrift = 3.402823e+38 # @todo - static
+        self.driftDropped = 0 # @todo - static
+        self.driftIncreased = 0 # @todo - static
 
-# Environment Bounds
-env.newPropertyFloat("MIN_POSITION", -0.5)
-env.newPropertyFloat("MAX_POSITION", +0.5)
+    def run(self, FLAMEGPU):
+        # This value should decline? as the model moves towards a steady equilibrium state
+        # Once an equilibrium state is reached, it is likely to oscillate between 2-4? values
+        totalDrift = FLAMEGPU.agent("Circle").sumFloat("drift");
+        if totalDrift <= self.prevTotalDrift:
+            self.driftDropped += 1
+        else:
+            self.driftIncreased += 1
+        self.prevTotalDrift = totalDrift;
+        print("{:.2f} Drift correct".format(100 * self.driftDropped / float(self.driftDropped + self.driftIncreased)))
 
-# Initialisation parameter(s)
-env.newPropertyFloat("MAX_INITIAL_SPEED", 1.0)
-env.newPropertyFloat("MIN_INITIAL_SPEED", 0.01)
 
-# Interaction radius
-env.newPropertyFloat("INTERACTION_RADIUS", 0.1)
-env.newPropertyFloat("SEPARATION_RADIUS", 0.005)
+# Utility function to get the cuberoot of a number without requiring numpy
+def cbrt(x):
+    root = abs(x) ** (1/3)
+    return root if x >= 0 else -root
 
-# Global Scalers
-env.newPropertyFloat("TIME_SCALE", 0.0005)
-env.newPropertyFloat("GLOBAL_SCALE", 0.15)
+# Define some constants
+AGENT_COUNT = 16384
+ENV_MAX = math.floor(cbrt(AGENT_COUNT))
+RADIUS = 2.0
+VISUALISE_COMMUNICATION_GRID = False
 
-# Rule scalers
-env.newPropertyFloat("STEER_SCALE", 0.65)
-env.newPropertyFloat("COLLISION_SCALE", 0.75)
-env.newPropertyFloat("MATCH_SCALE", 1.25)
+# Define a method which when called will define the model, Create the simulation object and execute it.
+def main():
+    # Define the FLAME GPU model
+    model = pyflamegpu.ModelDescription("example_model")
 
-"""
-  Location message
-"""
-message = model.newMessageSpatial3D("location")
-# Set the range and bounds.
-message.setRadius(env.getPropertyFloat("INTERACTION_RADIUS"))
-message.setMin(env.getPropertyFloat("MIN_POSITION"), env.getPropertyFloat("MIN_POSITION"), env.getPropertyFloat("MIN_POSITION"))
-message.setMax(env.getPropertyFloat("MAX_POSITION"), env.getPropertyFloat("MAX_POSITION"), env.getPropertyFloat("MAX_POSITION"))
-# A message to hold the location of an agent.
-message.newVariableID("id")
-# X Y Z are implicit.
-# message.newVariable<float>("x")
-# message.newVariable<float>("y")
-# message.newVariable<float>("z")
-message.newVariableFloat("fx")
-message.newVariableFloat("fy")
-message.newVariableFloat("fz")
+    # Define the location message list
+    message = model.newMessageSpatial3D("location")
+    # A message to hold the location of an agent.
+    message.newVariableID("id")
+    # X Y Z are implicit for spatial3D messages
+    # Set Spatial3D message list parameters
+    message.setRadius(RADIUS)
+    message.setMin(0, 0, 0)
+    message.setMax(ENV_MAX, ENV_MAX, ENV_MAX)
+
+    # Define the Circle agent type including variables and messages
+    agent = model.newAgent("Circle")
+    agent.newVariableInt("id");
+    agent.newVariableFloat("x");
+    agent.newVariableFloat("y");
+    agent.newVariableFloat("z");
+    agent.newVariableFloat("drift");  # Store the distance moved here, for validation
+    agent.newRTCFunction("output_message", output_message).setMessageOutput("location")
+    agent.newRTCFunction("move", move).setMessageInput("location")
+
+    # Define environment properties
+    env = model.Environment()
+    env.newPropertyFloat("repulse", 0.05)
+
+    # Layer #1
+    layer1 = model.newLayer()
+    layer1.addAgentFunction("Circle", "output_message")
+    # Layer #2
+    layer2 = model.newLayer()
+    layer2.addAgentFunction("Circle", "move")
+
+    # Add the callback step function to the model.
+    step_validation_fn = step_validation()
+    model.addStepFunctionCallback(step_validation_fn)
+
+    # Create the simulation object.
+    simulation = pyflamegpu.CUDASimulation(model)
     
-"""
-  Boid agent
-"""
-agent = model.newAgent("Boid")
-agent.newVariableFloat("x")
-agent.newVariableFloat("y")
-agent.newVariableFloat("z")
-agent.newVariableFloat("fx")
-agent.newVariableFloat("fy")
-agent.newVariableFloat("fz")
-agent.newRTCFunction("outputdata", outputdata).setMessageOutput("location")
-agent.newRTCFunction("inputdata", inputdata).setMessageInput("location")
+    # If visualisation is enabled, use it.
+
+    if pyflamegpu.VISUALISATION:
+        visualisation = simulation.getVisualisation()
+        # Configure the visualiastion.
+        INIT_CAM = ENV_MAX * 1.25
+        visualisation.setInitialCameraLocation(INIT_CAM, INIT_CAM, INIT_CAM)
+        visualisation.setCameraSpeed(0.01)
+        vis_agent = visualisation.addAgent("Circle")
+        # Position vars are named x, y, z so they are used by default
+        # Set the model to use, and scale it.
+        vis_agent.setModel(pyflamegpu.ICOSPHERE)
+        vis_agent.setModelScale(1 / 10.0)
+        # Optionally render the Subdivision of spatial messaging
+        if VISUALISE_COMMUNICATION_GRID:
+            ENV_MIN = 0
+            DIM = int(math.ceil((ENV_MAX - ENV_MIN) / RADIUS))  # Spatial partitioning scales up to fit none exact environments
+            DIM_MAX = DIM * RADIUS
+            pen = visualisation.newLineSketch(1, 1, 1, 0.2)  # white
+            # X lines
+            for y in range(0, DIM + 1):
+                for z in range(0, DIM + 1):
+                    pen.addVertex(ENV_MIN, y * RADIUS, z * RADIUS)
+                    pen.addVertex(DIM_MAX, y * RADIUS, z * RADIUS)
+            # Y axis
+            for x in range(0, DIM + 1):
+                for z in range(0, DIM + 1):
+                    pen.addVertex(x * RADIUS, ENV_MIN, z * RADIUS)
+                    pen.addVertex(x * RADIUS, DIM_MAX, z * RADIUS)
+            # Z axis
+            for x in range(0, DIM + 1):
+                for y in range(0, DIM + 1):
+                    pen.addVertex(x * RADIUS, y * RADIUS, ENV_MIN)
+                    pen.addVertex(x * RADIUS, y * RADIUS, DIM_MAX)
+        # Activate the visualisation.
+        visualisation.activate()
+
+    # Initialise the simulation
+    simulation.initialise(sys.argv)
+
+    # Generate a population if an initial states file is not provided
+    if not simulation.SimulationConfig().input_file:
+        # Seed the host RNG using the cuda simulations' RNG
+        random.seed(simulation.SimulationConfig().random_seed)
+        # Generate a vector of agents
+        population = pyflamegpu.AgentVector(agent, AGENT_COUNT)
+        # Iterate the population, initialising per-agent values
+        for i, instance in enumerate(population):
+            instance.setVariableFloat("x", random.uniform(0, ENV_MAX))
+            instance.setVariableFloat("y", random.uniform(0, ENV_MAX))
+            instance.setVariableFloat("z", random.uniform(0, ENV_MAX))
+        # Set the population for the simulation object
+        simulation.setPopulationData(population)
+
+    # Execute the simulation
+    simulation.simulate()
+
+    # Potentially export the population to disk
+    # simulation.exportData("end.xml")
+
+    # If visualisation is enabled, end the visualisation
+    if pyflamegpu.VISUALISATION:
+        visualisation.join()
 
 
-"""
-  Control flow
-"""    
-# Layer #1
-model.newLayer().addAgentFunction("Boid", "outputdata")
-# Layer #2
-model.newLayer().addAgentFunction("Boid", "inputdata")
-
-"""
-  Create Model Runner
-"""   
-cudaSimulation = pyflamegpu.CUDASimulation(model)
-
-"""
-  Create Visualisation
-"""
-if pyflamegpu.VISUALISATION:
-    visualisation = cudaSimulation.getVisualisation()
-    # Configure vis
-    envWidth = env.getPropertyFloat("MAX_POSITION") - env.getPropertyFloat("MIN_POSITION")
-    INIT_CAM = env.getPropertyFloat("MAX_POSITION") * 1.25
-    visualisation.setInitialCameraLocation(INIT_CAM, INIT_CAM, INIT_CAM)
-    visualisation.setCameraSpeed(0.001 * envWidth)
-    visualisation.setViewClips(0.00001, 50)
-    circ_agt = visualisation.addAgent("Boid")
-    # Position vars are named x, y, z so they are used by default
-    circ_agt.setForwardXVariable("fx")
-    circ_agt.setForwardYVariable("fy")
-    circ_agt.setForwardZVariable("fz")
-    circ_agt.setModel(pyflamegpu.STUNTPLANE)
-    circ_agt.setModelScale(env.getPropertyFloat("SEPARATION_RADIUS") * 10)
-    visualisation.activate()
-
-"""
-  Initialise Model
-"""
-cudaSimulation.initialise(sys.argv)
-
-# If no xml model file was is provided, generate a population.
-if not cudaSimulation.getSimulationConfig().input_file:
-    # Uniformly distribute agents within space, with uniformly distributed initial velocity.
-    random.seed(cudaSimulation.getSimulationConfig().random_seed)
-    min_pos = env.getPropertyFloat("MIN_POSITION")
-    max_pos = env.getPropertyFloat("MAX_POSITION")
-    min_speed = env.getPropertyFloat("MIN_INITIAL_SPEED")
-    max_speed = env.getPropertyFloat("MAX_INITIAL_SPEED")
-    populationSize = env.getPropertyUInt("POPULATION_TO_GENERATE")
-    population = pyflamegpu.AgentVector(model.Agent("Boid"), populationSize)
-    for i in range(populationSize):
-        instance = population[i]
-
-        # Agent position in space
-        instance.setVariableFloat("x", random.uniform(min_pos, max_pos))
-        instance.setVariableFloat("y", random.uniform(min_pos, max_pos))
-        instance.setVariableFloat("z", random.uniform(min_pos, max_pos))
-
-        # Generate a random velocity direction
-        fx = random.uniform(-1, 1)
-        fy = random.uniform(-1, 1)
-        fz = random.uniform(-1, 1)
-        # Generate a random speed between 0 and the maximum initial speed
-        fmagnitude = random.uniform(min_speed, max_speed)
-        # Use the random speed for the velocity.
-        vec3Normalize(fx, fy, fz)
-        vec3Mult(fx, fy, fz, fmagnitude)
-
-        # Set these for the agent.
-        instance.setVariableFloat("fx", fx)
-        instance.setVariableFloat("fy", fy)
-        instance.setVariableFloat("fz", fz)
-
-    cudaSimulation.setPopulationData(population)
-
-"""
-  Execution
-"""
-cudaSimulation.simulate()
-
-"""
-  Export Pop
-"""
-# cudaSimulation.exportData("end.xml")
-
-if pyflamegpu.VISUALISATION:
-    visualisation.join()
+# If this python script is the entry point, execute the main method
+if __name__ == "__main__":
+    main()
