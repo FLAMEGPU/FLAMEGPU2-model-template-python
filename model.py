@@ -7,8 +7,7 @@ import pyflamegpu
 # Import standard python libs that are used
 import sys, random, math
 
-# Define FLAME GPU Agent functions as strings
-
+# Define FLAME GPU Agent functions as strings, for compilation via nvrtc
 
 # Agent Function to output the agents ID and position in to a 3D spatial message list
 output_message = r"""
@@ -69,8 +68,7 @@ FLAMEGPU_AGENT_FUNCTION(move, flamegpu::MessageSpatial3D, flamegpu::MessageNone)
 """
 
 # A Callback host function, to check the progress of the model / validate the model.
-
-class step_validation(pyflamegpu.HostFunctionCallback):
+class step_validation(pyflamegpu.HostFunction):
     def __init__(self):
         super().__init__()
         # Static variables?
@@ -106,6 +104,10 @@ def main():
     # Define the FLAME GPU model
     model = pyflamegpu.ModelDescription("example_model")
 
+    # Define environment properties
+    env = model.Environment()
+    env.newPropertyFloat("repulse", 0.05)
+
     # Define the location message list
     message = model.newMessageSpatial3D("location")
     # A message to hold the location of an agent.
@@ -123,29 +125,27 @@ def main():
     agent.newVariableFloat("y");
     agent.newVariableFloat("z");
     agent.newVariableFloat("drift");  # Store the distance moved here, for validation
-    agent.newRTCFunction("output_message", output_message).setMessageOutput("location")
-    agent.newRTCFunction("move", move).setMessageInput("location")
 
-    # Define environment properties
-    env = model.Environment()
-    env.newPropertyFloat("repulse", 0.05)
+    # Define agent functions
+    output_message_description = agent.newRTCFunction("output_message", output_message)
+    output_message_description.setMessageOutput("location")
+    move_description = agent.newRTCFunction("move", move)
+    move_description.setMessageInput("location")
 
-    # Layer #1
-    layer1 = model.newLayer()
-    layer1.addAgentFunction("Circle", "output_message")
-    # Layer #2
-    layer2 = model.newLayer()
-    layer2.addAgentFunction("Circle", "move")
+    # Add a dependency that move requires outputMessage to have executed
+    move_description.dependsOn(output_message_description)
 
-    # Add the callback step function to the model.
+    # Identify the root of execution
+    model.addExecutionRoot(output_message_description)
+
+    # Add the step function to the model.
     step_validation_fn = step_validation()
-    model.addStepFunctionCallback(step_validation_fn)
+    model.addStepFunction(step_validation_fn)
 
     # Create the simulation object.
     simulation = pyflamegpu.CUDASimulation(model)
     
     # If visualisation is enabled, use it.
-
     if pyflamegpu.VISUALISATION:
         visualisation = simulation.getVisualisation()
         # Configure the visualiastion.
@@ -201,13 +201,12 @@ def main():
     # Execute the simulation
     simulation.simulate()
 
-    # Potentially export the population to disk
-    # simulation.exportData("end.xml")
-
     # If visualisation is enabled, end the visualisation
     if pyflamegpu.VISUALISATION:
         visualisation.join()
 
+    # Ensure profiling / memcheck work correctly
+    pyflamegpu.cleanup()
 
 # If this python script is the entry point, execute the main method
 if __name__ == "__main__":
