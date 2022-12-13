@@ -1,16 +1,16 @@
-# FLAME GPU 2 Python Template Example
+# FLAME GPU 2 Template for Python3
 
-This repository acts as an example to be used as a template for creating standalone FLAME GPU 2 models which use the python interface.
+This repository can be used as a template for creating your own FLAME GPU 2 simulations or ensembles using the Python3 interface, using NVRTC, or the experimental native python approach.
 
 For details on how to develop a model using FLAME GPU 2, refer to the [userguide & API documentation](https://docs.flamegpu.com/).
 
-## CUDA C++ Interface
+## C++ (CUDA) Interface
 
-FLAME GPU 2 also provides a python-based interface for writing models. If you wish to use this instead of the CUDA C++ interface, see [FLAMEGPU/FLAMEGPU2-example-template](https://github.com/FLAMEGPU/FLAMEGPU2-example-template).
+FLAME GPU 2 also provides a python-based interface for writing models. If you wish to use this instead of the python2 interface, see [FLAMEGPU/FLAMEGPU2-model-template-cpp](https://github.com/FLAMEGPU/FLAMEGPU2-model-template-cpp).
 
 ## Dependencies
 
-+ [Python](https://www.python.org/) `>= 3.6` for python integration
++ [Python](https://www.python.org/) `>= 3.7`
 + [CUDA](https://developer.nvidia.com/cuda-downloads) `>= 11.0` and a [Compute Capability](https://developer.nvidia.com/cuda-gpus) `>= 3.5` NVIDIA GPU.
 + pyflamegpu - the python bindings for [FLAME GPU](https://github.com/FLAMEGPU/FLAMEGPU2) `>= 2`
 
@@ -21,20 +21,21 @@ FLAME GPU 2 also provides a python-based interface for writing models. If you wi
 ### Pre-compiled pyflamegpu
 
 Pre-built python wheels are available for Windows and Linux, for a range of Python versions on `x86_64` systems.
+It is not currently available through any python package repositories.
 
 To install a pre-built version of `pyflamegpu`:
 
 1. Download the appropriate `.whl` for the [Latest Release](https://github.com/FLAMEGPU/FLAMEGPU2/releases/latest)
 2. Optionally create and activate a python `venv` or Conda environment
-3. Install the wheel locally via pip
+3. Install the wheel locally via pip. See the release notes for details.
 
 ### Building pyflamegpu
 
-If the available python wheels are not appropriate for your system, or you wish to build with different CMake configuration options (i.e. `SEATBELTS=OFF` for improved performance with reduced safety checks) you can build your own copy of pyflamegpu.
+If the available python wheels are not appropriate for your system, or you wish to build with different CMake configuration options (i.e. `FLAMEGPU_SEATBELTS=OFF` for improved performance with reduced safety checks) you can build your own copy of pyflamegpu.
 
 1. Clone the main [FLAMEGPU/FLAMEGPU2 git repository](https://github.com/FLAMEGPU/FLAMEGPU2) or download an [archived release](https://github.com/FLAMEGPU/FLAMEGPU2/releases).
 2. Create a build directory and navigate to it.
-3. Configure CMake with `BUILD_SWIG_PYTHON` set to `ON`.
+3. Configure CMake with `FLAMEGPU_BUILD_PYTHON` set to `ON`.
     + See the main [FLAMEGPU/FLAMEGPU2](https://github.com/FLAMEGPU/FLAMEGPU2) repository for further information on CMake configuration options
 4. Build the `pyflamegpu` target
 5. Optionally create and activate a python `venv` or Conda environment
