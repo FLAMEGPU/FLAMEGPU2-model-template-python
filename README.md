@@ -10,8 +10,8 @@ FLAME GPU 2 also provides a python-based interface for writing models. If you wi
 
 ## Dependencies
 
-+ [Python](https://www.python.org/) `>= 3.7`
-+ [CUDA](https://developer.nvidia.com/cuda-downloads) `>= 11.0` and a [Compute Capability](https://developer.nvidia.com/cuda-gpus) `>= 3.5` NVIDIA GPU.
++ [Python](https://www.python.org/) `>= 3.10`
++ [CUDA](https://developer.nvidia.com/cuda-downloads) `>= 12.0` and a [Compute Capability](https://developer.nvidia.com/cuda-gpus) `>= 5.0` NVIDIA GPU.
 + pyflamegpu - the python bindings for [FLAME GPU](https://github.com/FLAMEGPU/FLAMEGPU2) `>= 2`
 
 ## Getting pyflamegpu
@@ -63,3 +63,7 @@ For general information on FLAME GPU, Usage of FLAME GPU `>= 2` and support see:
 + [Documentation and User Guide](https://docs.flamegpu.com)
 + [GitHub Discussions](https://github.com/FLAMEGPU/FLAMEGPU2/discussions)
 + [GitHub Issues](https://github.com/FLAMEGPU/FLAMEGPU2/issues)
+
+## License
+
+FLAME GPU 2 is available under a dual licence model. This repository is not included within the main library distribution and is licenced under only [AGPL-3.0-only license](https://github.com/FLAMEGPU/FLAMEGPU2-model-template-python/blob/master/LICENSE.MD) for open source usage.
